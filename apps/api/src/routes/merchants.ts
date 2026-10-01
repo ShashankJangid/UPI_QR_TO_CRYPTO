@@ -20,6 +20,41 @@ router.get('/profile', async (req: Request, res: Response) => {
   }
 });
 
+router.post('/connect-wallet', async (req: Request, res: Response) => {
+  try {
+    const { walletAddress, walletNetwork = 'polygon', businessName } = req.body;
+
+    if (!walletAddress || !blockchainService.isValidAddress(walletAddress)) {
+      return res.status(400).json({ error: 'Please provide a valid 42-character EVM address (0x...)' });
+    }
+
+    let merchant = await db.findMerchantByWalletAddress(walletAddress);
+    if (!merchant) {
+      const now = new Date().toISOString();
+      const short = `${walletAddress.substring(0, 6)}...${walletAddress.substring(walletAddress.length - 4)}`;
+      merchant = await db.createMerchant({
+        id: `m_${walletAddress.substring(2, 8).toLowerCase()}_${Date.now().toString(36)}`,
+        email: `${walletAddress.substring(2, 10).toLowerCase()}@merchant.local`,
+        businessName: businessName?.trim() || `Merchant ${short}`,
+        walletAddress,
+        walletNetwork: (walletNetwork as BlockchainNetwork) || 'polygon',
+        isActive: true,
+        createdAt: now,
+        updatedAt: now
+      });
+    } else if (walletNetwork && merchant.walletNetwork !== walletNetwork) {
+      merchant = await db.updateMerchantWallet(merchant.id, walletAddress, walletNetwork as BlockchainNetwork);
+    }
+
+    return res.json({
+      message: 'Wallet connected successfully',
+      merchant
+    });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
 router.patch('/wallet', async (req: Request, res: Response) => {
   try {
     const { merchantId = 'merchant-default-001', walletAddress, walletNetwork = 'polygon' } = req.body;

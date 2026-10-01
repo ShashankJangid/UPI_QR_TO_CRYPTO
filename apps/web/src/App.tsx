@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { Navbar } from './components/Navbar';
+import { WalletConnectSection } from './components/WalletConnectSection';
 import { DashboardOverview } from './components/DashboardOverview';
 import { TransactionsTable } from './components/TransactionsTable';
 import { CollectPaymentModal } from './components/CollectPaymentModal';
@@ -16,21 +17,23 @@ export function App() {
   const [isCollectOpen, setIsCollectOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (targetMerchantId?: string) => {
     try {
-      const merchantRes = await fetch(`${API_URL}/api/v1/merchants/profile`);
+      const activeId = targetMerchantId || localStorage.getItem('connected_merchant_id') || 'merchant-default-001';
+
+      const merchantRes = await fetch(`${API_URL}/api/v1/merchants/profile?merchantId=${activeId}`);
       if (merchantRes.ok) {
         const m = await merchantRes.json();
         setMerchant(m);
       }
 
-      const statsRes = await fetch(`${API_URL}/api/v1/merchants/stats`);
+      const statsRes = await fetch(`${API_URL}/api/v1/merchants/stats?merchantId=${activeId}`);
       if (statsRes.ok) {
         const s = await statsRes.json();
         setStats(s);
       }
 
-      const ordersRes = await fetch(`${API_URL}/api/v1/merchants/transactions`);
+      const ordersRes = await fetch(`${API_URL}/api/v1/merchants/transactions?merchantId=${activeId}`);
       if (ordersRes.ok) {
         const o = await ordersRes.json();
         setOrders(o);
@@ -52,13 +55,14 @@ export function App() {
 
   useEffect(() => {
     const socket: Socket = io(SOCKET_URL);
+    const activeId = merchant?.id || localStorage.getItem('connected_merchant_id') || 'merchant-default-001';
 
     socket.on('connect', () => {
-      socket.emit('subscribe:merchant', 'merchant-default-001');
+      socket.emit('subscribe:merchant', activeId);
     });
 
     socket.on(SOCKET_CHANNELS.PAYMENT_STATUS_UPDATE, () => {
-      fetchData();
+      fetchData(activeId);
     });
 
     socket.on(SOCKET_CHANNELS.RATE_UPDATE, (data: { rate: number }) => {
@@ -68,7 +72,12 @@ export function App() {
     return () => {
       socket.disconnect();
     };
-  }, [fetchData]);
+  }, [fetchData, merchant?.id]);
+
+  const handleMerchantConnected = (newMerchant: Merchant) => {
+    setMerchant(newMerchant);
+    fetchData(newMerchant.id);
+  };
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col selection:bg-emerald-600 selection:text-white">
@@ -80,6 +89,12 @@ export function App() {
       />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+        <WalletConnectSection
+          merchant={merchant}
+          onMerchantConnected={handleMerchantConnected}
+          onGenerateQrClick={() => setIsCollectOpen(true)}
+        />
+
         <DashboardOverview
           stats={stats}
           onOpenCollect={() => setIsCollectOpen(true)}
@@ -87,7 +102,7 @@ export function App() {
 
         <TransactionsTable
           orders={orders}
-          onRefresh={fetchData}
+          onRefresh={() => fetchData(merchant?.id)}
         />
       </main>
 
@@ -106,7 +121,7 @@ export function App() {
         isOpen={isCollectOpen}
         onClose={() => setIsCollectOpen(false)}
         merchant={merchant}
-        onPaymentSuccess={fetchData}
+        onPaymentSuccess={() => fetchData(merchant?.id)}
       />
 
       <SettingsModal
@@ -114,8 +129,7 @@ export function App() {
         onClose={() => setIsSettingsOpen(false)}
         merchant={merchant}
         onMerchantUpdated={m => {
-          setMerchant(m);
-          fetchData();
+          handleMerchantConnected(m);
         }}
       />
     </div>

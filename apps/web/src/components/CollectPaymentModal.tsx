@@ -394,6 +394,13 @@ export const CollectPaymentModal: React.FC<CollectPaymentModalProps> = ({
                     {copiedVpa ? <Check className="h-3 w-3 text-emerald-600" /> : <Copy className="h-3 w-3" />}
                   </button>
                 </div>
+
+                <div className="w-full flex items-center justify-between px-3 py-2 rounded-lg bg-emerald-50 border border-emerald-200 text-xs">
+                  <span className="text-emerald-800 font-medium">Payout Destination:</span>
+                  <span className="mono text-emerald-950 font-bold truncate max-w-[200px]" title={paymentData?.destinationWallet || merchant?.walletAddress}>
+                    {paymentData?.destinationWallet || merchant?.walletAddress} ({paymentData?.destinationNetwork || merchant?.walletNetwork || 'polygon'})
+                  </span>
+                </div>
               </div>
 
               <div className="rounded-xl bg-slate-50 border border-slate-200 p-4 space-y-3">

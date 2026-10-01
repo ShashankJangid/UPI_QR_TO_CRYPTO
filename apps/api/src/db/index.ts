@@ -126,6 +126,28 @@ class DatabaseManager {
     return merchant || null;
   }
 
+  async findMerchantByWalletAddress(walletAddress: string): Promise<Merchant | null> {
+    const cleanAddr = walletAddress.toLowerCase();
+    if (this.isPostgresAvailable && this.pgPool) {
+      const res = await this.pgPool.query('SELECT * FROM merchants WHERE LOWER(wallet_address) = $1 LIMIT 1', [cleanAddr]);
+      if (res.rows.length === 0) return null;
+      const row = res.rows[0];
+      return {
+        id: row.id,
+        email: row.email,
+        businessName: row.business_name,
+        walletAddress: row.wallet_address,
+        walletNetwork: row.wallet_network as BlockchainNetwork,
+        isActive: row.is_active,
+        createdAt: row.created_at.toISOString(),
+        updatedAt: row.updated_at.toISOString()
+      };
+    }
+
+    const merchant = this.memoryStore.merchants.find(m => m.walletAddress.toLowerCase() === cleanAddr);
+    return merchant || null;
+  }
+
   async createMerchant(merchant: Merchant): Promise<Merchant> {
     if (this.isPostgresAvailable && this.pgPool) {
       await this.pgPool.query(
