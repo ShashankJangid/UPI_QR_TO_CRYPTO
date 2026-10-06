@@ -6,7 +6,27 @@ import { Order, CreatePaymentRequest, CreatePaymentResponse, BlockchainNetwork }
 
 export class PaymentService {
   async createPayment(merchantId: string, req: CreatePaymentRequest): Promise<CreatePaymentResponse> {
-    const merchant = await db.findMerchantById(merchantId);
+    let merchant = await db.findMerchantById(merchantId);
+    if (!merchant && req.walletAddress) {
+      merchant = await db.findMerchantByWalletAddress(req.walletAddress);
+    }
+    if (!merchant) {
+      merchant = await db.findMerchantById('merchant-default-001');
+    }
+    if (!merchant && req.walletAddress) {
+      const now = new Date().toISOString();
+      merchant = await db.createMerchant({
+        id: `m_${req.walletAddress.substring(2, 8).toLowerCase()}_${Date.now().toString(36)}`,
+        email: `${req.walletAddress.substring(2, 10).toLowerCase()}@merchant.local`,
+        businessName: `Merchant ${req.walletAddress.substring(0, 6)}...${req.walletAddress.substring(req.walletAddress.length - 4)}`,
+        walletAddress: req.walletAddress,
+        walletNetwork: req.walletNetwork || 'polygon',
+        isActive: true,
+        createdAt: now,
+        updatedAt: now
+      });
+    }
+
     if (!merchant) {
       throw new Error(`Merchant with id ${merchantId} not found`);
     }
@@ -24,7 +44,9 @@ export class PaymentService {
       orderId,
       req.amountInr,
       walletAddress,
-      network
+      network,
+      undefined,
+      merchant.businessName
     );
 
     const now = new Date();
@@ -136,6 +158,12 @@ export class PaymentService {
 
   async simulatePayment(orderId: string): Promise<Order | null> {
     return this.handleUpiConfirmed(orderId, 'testuser@okaxis', `SIM${Date.now().toString().slice(-9)}`);
+  }
+
+  async retryPayout(orderId: string): Promise<Order | null> {
+    const order = await db.findOrderById(orderId);
+    if (!order) return null;
+    return this.dispatchCryptoPayout(orderId);
   }
 }
 

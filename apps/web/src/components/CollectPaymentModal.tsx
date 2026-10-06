@@ -55,7 +55,15 @@ export const CollectPaymentModal: React.FC<CollectPaymentModalProps> = ({
   const [showUtrInput, setShowUtrInput] = useState(false);
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) {
+      setStep('input');
+      setPaymentData(null);
+      setCurrentStatus('PENDING');
+      setTxHash(null);
+      setUtrInput('');
+      setShowUtrInput(false);
+      return;
+    }
 
     const fetchQuote = async () => {
       if (amountInr <= 0) return;

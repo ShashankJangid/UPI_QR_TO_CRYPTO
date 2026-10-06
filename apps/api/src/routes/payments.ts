@@ -98,4 +98,31 @@ router.post('/:id/simulate', async (req: Request, res: Response) => {
   }
 });
 
+router.get('/:id', async (req: Request, res: Response) => {
+  try {
+    const order = await db.findOrderById(req.params.id);
+    if (!order) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
+    return res.json(order);
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/:id/retry', async (req: Request, res: Response) => {
+  try {
+    const order = await paymentService.retryPayout(req.params.id);
+    if (!order) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
+    return res.json({
+      message: 'Payout retried successfully.',
+      order
+    });
+  } catch (err: any) {
+    return res.status(400).json({ error: err.message });
+  }
+});
+
 export default router;

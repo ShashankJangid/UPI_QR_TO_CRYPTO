@@ -62,6 +62,20 @@ export const WalletConnectSection: React.FC<WalletConnectSectionProps> = ({
     }
   };
 
+  const handleDisconnect = () => {
+    localStorage.removeItem('connected_wallet');
+    localStorage.removeItem('connected_network');
+    localStorage.removeItem('connected_merchant_id');
+    setWalletInput('');
+    setIsEditing(true);
+  };
+
+  const fillDemoWallet = () => {
+    setWalletInput('0x71C7656EC7ab88b098defB751B7401B5f6d8976F');
+    setNetwork('polygon');
+    if (!businessName) setBusinessName('Demo Merchant Store');
+  };
+
   const getExplorerLink = (address: string) => {
     const explorer = USDT_CONTRACTS[network]?.explorer?.replace('/tx/', '/address/') || 'https://polygonscan.com/address/';
     return `${explorer}${address}`;
@@ -83,13 +97,21 @@ export const WalletConnectSection: React.FC<WalletConnectSectionProps> = ({
         </div>
 
         {merchant && !isEditing && (
-          <button
-            onClick={() => setIsEditing(true)}
-            className="self-start sm:self-auto text-xs font-semibold px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors flex items-center space-x-1.5"
-          >
-            <RefreshCw className="h-3.5 w-3.5" />
-            <span>Switch / Change Wallet</span>
-          </button>
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={() => setIsEditing(true)}
+              className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors flex items-center space-x-1.5"
+            >
+              <RefreshCw className="h-3.5 w-3.5" />
+              <span>Switch / Change Wallet</span>
+            </button>
+            <button
+              onClick={handleDisconnect}
+              className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 transition-colors"
+            >
+              <span>Disconnect</span>
+            </button>
+          </div>
         )}
       </div>
 
@@ -149,9 +171,18 @@ export const WalletConnectSection: React.FC<WalletConnectSectionProps> = ({
                 placeholder="0x71C7656EC7ab88b098defB751B7401B5f6d8976F"
                 className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-900 mono placeholder-slate-400 focus:outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600"
               />
-              <p className="text-[11px] text-slate-500">
-                Enter your MetaMask, Trust Wallet, Ledger, or exchange deposit address for USDT.
-              </p>
+              <div className="flex items-center justify-between text-[11px] pt-0.5">
+                <span className="text-slate-500">
+                  Enter your MetaMask, Trust Wallet, Ledger, or exchange deposit address.
+                </span>
+                <button
+                  type="button"
+                  onClick={fillDemoWallet}
+                  className="text-emerald-700 hover:text-emerald-800 font-semibold underline"
+                >
+                  Fill Demo Wallet
+                </button>
+              </div>
             </div>
 
             <div className="space-y-1.5">

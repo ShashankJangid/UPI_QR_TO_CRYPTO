@@ -75,6 +75,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       }
 
       const data = await res.json();
+      localStorage.setItem('connected_wallet', walletAddress);
+      localStorage.setItem('connected_network', network);
+      localStorage.setItem('connected_merchant_id', data.merchant.id);
       onMerchantUpdated(data.merchant);
       setSuccessMessage(true);
       setTimeout(() => {

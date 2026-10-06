@@ -19,9 +19,27 @@ export function App() {
 
   const fetchData = useCallback(async (targetMerchantId?: string) => {
     try {
-      const activeId = targetMerchantId || localStorage.getItem('connected_merchant_id') || 'merchant-default-001';
+      let activeId = targetMerchantId || localStorage.getItem('connected_merchant_id') || 'merchant-default-001';
 
-      const merchantRes = await fetch(`${API_URL}/api/v1/merchants/profile?merchantId=${activeId}`);
+      let merchantRes = await fetch(`${API_URL}/api/v1/merchants/profile?merchantId=${activeId}`);
+      if (!merchantRes.ok && activeId !== 'merchant-default-001') {
+        const savedWallet = localStorage.getItem('connected_wallet');
+        const savedNetwork = localStorage.getItem('connected_network') || 'polygon';
+        if (savedWallet) {
+          const connectRes = await fetch(`${API_URL}/api/v1/merchants/connect-wallet`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ walletAddress: savedWallet, walletNetwork: savedNetwork })
+          });
+          if (connectRes.ok) {
+            const data = await connectRes.json();
+            activeId = data.merchant.id;
+            localStorage.setItem('connected_merchant_id', activeId);
+            merchantRes = await fetch(`${API_URL}/api/v1/merchants/profile?merchantId=${activeId}`);
+          }
+        }
+      }
+
       if (merchantRes.ok) {
         const m = await merchantRes.json();
         setMerchant(m);
