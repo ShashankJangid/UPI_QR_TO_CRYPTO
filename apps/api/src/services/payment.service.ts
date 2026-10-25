@@ -149,8 +149,26 @@ export class PaymentService {
 
   async confirmWithUtr(orderId: string, utr: string, customerVpa?: string): Promise<Order | null> {
     const cleanUtr = utr.trim();
-    if (!cleanUtr || cleanUtr.length < 8) {
-      throw new Error('Please enter a valid 12-digit Bank UTR / UPI reference number');
+    if (!cleanUtr || cleanUtr.length < 8 || cleanUtr.length > 35 || !/^[a-zA-Z0-9]+$/.test(cleanUtr)) {
+      throw new Error('Please enter a valid alphanumeric Bank UTR / UPI reference number (8 to 35 characters)');
+    }
+
+    const order = await db.findOrderById(orderId);
+    if (!order) {
+      throw new Error(`Order ${orderId} not found`);
+    }
+
+    if (order.status === 'COMPLETED') {
+      return order;
+    }
+
+    if (order.status === 'EXPIRED') {
+      throw new Error('This payment request has expired. Please generate a new QR code.');
+    }
+
+    const existingClaim = await db.findOrderByUtr(cleanUtr);
+    if (existingClaim && existingClaim.id !== orderId) {
+      throw new Error(`Security Alert: Bank UTR ${cleanUtr} has already been verified for order ${existingClaim.id}. Duplicate submissions are strictly prevented.`);
     }
 
     return this.handleUpiConfirmed(orderId, customerVpa || 'UPI-Direct', cleanUtr);

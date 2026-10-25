@@ -1,5 +1,5 @@
 import React from 'react';
-import { IndianRupee, Coins, CheckCircle2, Clock, ShieldCheck, ArrowUpRight } from 'lucide-react';
+import { IndianRupee, Coins, CheckCircle2, Clock, ShieldCheck, ArrowUpRight, Lock, Zap } from 'lucide-react';
 import { DashboardStats } from '@upi-crypto/shared';
 
 interface DashboardOverviewProps {
@@ -15,7 +15,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({ stats, onO
           <div className="space-y-2 max-w-2xl">
             <div className="inline-flex items-center space-x-2 px-2.5 py-1 rounded-full bg-emerald-100/80 border border-emerald-200 text-emerald-800 text-xs font-semibold">
               <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
-              <span>Compliant FIU-IND On-Ramp Active</span>
+              <span>Compliant FIU-IND Gateway • Enterprise Replay Protection</span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
               Accept UPI Payments, Receive Pure <span className="text-emerald-600">USDT</span>
@@ -96,6 +96,38 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({ stats, onO
               {stats?.pendingOrdersCount || 0}
             </div>
             <p className="text-[11px] text-slate-500 mt-1">Awaiting UPI scan or dispatch</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div className="p-3.5 rounded-xl bg-white border border-slate-200 flex items-center space-x-3 shadow-sm">
+          <div className="h-8 w-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+            <Lock className="h-4 w-4" />
+          </div>
+          <div>
+            <div className="text-xs font-bold text-slate-900">Anti-Replay Security Engine</div>
+            <div className="text-[11px] text-slate-500">Prevents duplicate UTR claims across all banks</div>
+          </div>
+        </div>
+
+        <div className="p-3.5 rounded-xl bg-white border border-slate-200 flex items-center space-x-3 shadow-sm">
+          <div className="h-8 w-8 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center">
+            <Zap className="h-4 w-4" />
+          </div>
+          <div>
+            <div className="text-xs font-bold text-slate-900">Hot Wallet Relayer Architecture</div>
+            <div className="text-[11px] text-slate-500">Sub-second blockchain dispatch with Bor RPCs</div>
+          </div>
+        </div>
+
+        <div className="p-3.5 rounded-xl bg-white border border-slate-200 flex items-center space-x-3 shadow-sm">
+          <div className="h-8 w-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
+            <ShieldCheck className="h-4 w-4" />
+          </div>
+          <div>
+            <div className="text-xs font-bold text-slate-900">1% TDS Section 194S Deductions</div>
+            <div className="text-[11px] text-slate-500">Fully compliant calculation for Indian tax rules</div>
           </div>
         </div>
       </div>

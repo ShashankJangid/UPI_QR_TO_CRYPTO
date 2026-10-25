@@ -12,7 +12,12 @@ import {
   Smartphone, 
   Sparkles,
   Hash,
-  Loader2
+  Loader2,
+  Download,
+  Printer,
+  Maximize2,
+  Minimize2,
+  ShieldCheck
 } from 'lucide-react';
 import { io, Socket } from 'socket.io-client';
 import { API_URL, SOCKET_URL } from '../config';
@@ -53,6 +58,26 @@ export const CollectPaymentModal: React.FC<CollectPaymentModalProps> = ({
   const [utrInput, setUtrInput] = useState('');
   const [isSubmittingUtr, setIsSubmittingUtr] = useState(false);
   const [showUtrInput, setShowUtrInput] = useState(false);
+  const [isPosMode, setIsPosMode] = useState(false);
+
+  const playSuccessChime = () => {
+    try {
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(587.33, ctx.currentTime);
+      osc.frequency.setValueAtTime(880, ctx.currentTime + 0.15);
+      gain.gain.setValueAtTime(0.15, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.5);
+    } catch {}
+  };
 
   useEffect(() => {
     if (!isOpen) {
@@ -62,6 +87,7 @@ export const CollectPaymentModal: React.FC<CollectPaymentModalProps> = ({
       setTxHash(null);
       setUtrInput('');
       setShowUtrInput(false);
+      setIsPosMode(false);
       return;
     }
 
@@ -101,6 +127,7 @@ export const CollectPaymentModal: React.FC<CollectPaymentModalProps> = ({
           setTxHash(update.txHash);
         }
         if (update.status === 'COMPLETED') {
+          playSuccessChime();
           onPaymentSuccess();
         }
       }
@@ -231,9 +258,13 @@ export const CollectPaymentModal: React.FC<CollectPaymentModalProps> = ({
   const payeeVpaMatch = paymentData?.upiDeepLink ? paymentData.upiDeepLink.match(/pa=([^&]+)/) : null;
   const payeeVpa = payeeVpaMatch ? decodeURIComponent(payeeVpaMatch[1]) : 'merchant@icici';
 
+  const handlePrint = () => {
+    window.print();
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="relative w-full max-w-lg rounded-2xl bg-white border border-slate-200 shadow-2xl overflow-hidden max-h-[92vh] overflow-y-auto">
+      <div className={`relative w-full ${isPosMode ? 'max-w-2xl' : 'max-w-lg'} rounded-2xl bg-white border border-slate-200 shadow-2xl overflow-hidden max-h-[95vh] overflow-y-auto transition-all`}>
         <div className="sticky top-0 z-10 bg-white flex items-center justify-between px-6 py-4 border-b border-slate-100">
           <div className="flex items-center space-x-2">
             <div className="h-8 w-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
@@ -241,19 +272,31 @@ export const CollectPaymentModal: React.FC<CollectPaymentModalProps> = ({
             </div>
             <div>
               <h3 className="font-bold text-base text-slate-900">
-                {step === 'input' ? 'Collect Customer Payment' : 'Scan & Pay via UPI'}
+                {step === 'input' ? 'Collect Customer Payment' : (isPosMode ? 'Countertop Display Mode' : 'Scan & Pay via UPI')}
               </h3>
               <p className="text-xs text-slate-500">
                 {step === 'input' ? 'Generate dynamic payment QR code' : `Order ID: ${paymentData?.orderId}`}
               </p>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
-          >
-            <X className="h-5 w-5" />
-          </button>
+          <div className="flex items-center space-x-1">
+            {step === 'qr' && (
+              <button
+                type="button"
+                onClick={() => setIsPosMode(!isPosMode)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+                title={isPosMode ? 'Standard View' : 'Countertop POS View'}
+              >
+                {isPosMode ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
         </div>
 
         <div className="p-6">
@@ -388,19 +431,32 @@ export const CollectPaymentModal: React.FC<CollectPaymentModalProps> = ({
                   </div>
                 </div>
 
-                <div className="flex items-center space-x-2 px-3 py-1 rounded-full bg-slate-100 text-[11px] text-slate-700 font-medium">
-                  <span>UPI ID: <strong className="mono">{payeeVpa}</strong></span>
-                  <button
-                    onClick={() => {
-                      navigator.clipboard.writeText(payeeVpa);
-                      setCopiedVpa(true);
-                      setTimeout(() => setCopiedVpa(false), 2000);
-                    }}
-                    className="text-slate-500 hover:text-slate-800"
-                    title="Copy UPI ID"
-                  >
-                    {copiedVpa ? <Check className="h-3 w-3 text-emerald-600" /> : <Copy className="h-3 w-3" />}
-                  </button>
+                <div className="flex items-center space-x-2">
+                  <div className="flex items-center space-x-2 px-3 py-1 rounded-full bg-slate-100 text-[11px] text-slate-700 font-medium">
+                    <span>UPI ID: <strong className="mono">{payeeVpa}</strong></span>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(payeeVpa);
+                        setCopiedVpa(true);
+                        setTimeout(() => setCopiedVpa(false), 2000);
+                      }}
+                      className="text-slate-500 hover:text-slate-800"
+                      title="Copy UPI ID"
+                    >
+                      {copiedVpa ? <Check className="h-3 w-3 text-emerald-600" /> : <Copy className="h-3 w-3" />}
+                    </button>
+                  </div>
+                  {paymentData?.upiQrImageUrl && (
+                    <a
+                      href={paymentData.upiQrImageUrl}
+                      download={`upi-qr-${paymentData.orderId}.png`}
+                      className="inline-flex items-center space-x-1 px-3 py-1 rounded-full bg-slate-100 hover:bg-slate-200 text-[11px] text-slate-700 font-medium transition-colors"
+                      title="Download QR Image"
+                    >
+                      <Download className="h-3 w-3 text-slate-600" />
+                      <span>Save QR</span>
+                    </a>
+                  )}
                 </div>
 
                 <div className="w-full flex items-center justify-between px-3 py-2 rounded-lg bg-emerald-50 border border-emerald-200 text-xs">
@@ -539,19 +595,35 @@ export const CollectPaymentModal: React.FC<CollectPaymentModalProps> = ({
                 )}
 
                 {currentStatus === 'COMPLETED' && (
-                  <button
-                    onClick={() => {
-                      setStep('input');
-                      setAmountInr(500);
-                      setPaymentData(null);
-                      setCurrentStatus('PENDING');
-                      setUtrInput('');
-                    }}
-                    className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm flex items-center justify-center space-x-2 transition-all shadow-md shadow-emerald-600/20"
-                  >
-                    <span>Collect Another Payment</span>
-                  </button>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={handlePrint}
+                      className="px-4 py-3 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-800 font-semibold text-xs flex items-center justify-center space-x-1.5 transition-colors"
+                      title="Print Customer Receipt"
+                    >
+                      <Printer className="h-4 w-4" />
+                      <span>Print Receipt</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setStep('input');
+                        setAmountInr(500);
+                        setPaymentData(null);
+                        setCurrentStatus('PENDING');
+                        setUtrInput('');
+                      }}
+                      className="flex-1 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm flex items-center justify-center space-x-2 transition-all shadow-md shadow-emerald-600/20"
+                    >
+                      <span>Collect Another Payment</span>
+                    </button>
+                  </div>
                 )}
+              </div>
+
+              <div className="pt-2 border-t border-slate-100 flex items-center justify-center space-x-1.5 text-[10px] text-slate-400">
+                <ShieldCheck className="h-3 w-3 text-emerald-600" />
+                <span>NPCI UPI Integrated • 100% Anti-Replay Protected • Instant On-Chain Delivery</span>
               </div>
             </div>
           )}

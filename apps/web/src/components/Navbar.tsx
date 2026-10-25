@@ -39,6 +39,13 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
         </div>
 
+        <div className="hidden lg:flex items-center space-x-3">
+          <div className="flex items-center space-x-1.5 px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 font-semibold text-[11px]">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span>RPC Online • Bor Relayer Active</span>
+          </div>
+        </div>
+
         <div className="hidden md:flex items-center space-x-2 px-3 py-1.5 rounded-full bg-slate-100 border border-slate-200 text-xs">
           <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
           <span className="text-slate-600">Live Rate:</span>

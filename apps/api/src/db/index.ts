@@ -224,6 +224,27 @@ class DatabaseManager {
     return order || null;
   }
 
+  async findOrderByUtr(utr: string): Promise<Order | null> {
+    const cleanUtr = utr.trim().toLowerCase();
+    if (!cleanUtr) return null;
+
+    if (this.isPostgresAvailable && this.pgPool) {
+      const res = await this.pgPool.query(
+        `SELECT * FROM orders WHERE LOWER(customer_vpa) LIKE $1 AND status IN ('UPI_PAID', 'PROCESSING_CRYPTO', 'COMPLETED') LIMIT 1`,
+        [`%${cleanUtr}%`]
+      );
+      if (res.rows.length === 0) return null;
+      return this.mapOrderRow(res.rows[0]);
+    }
+
+    const order = this.memoryStore.orders.find(o => 
+      o.customerVpa && 
+      o.customerVpa.toLowerCase().includes(cleanUtr) && 
+      ['UPI_PAID', 'PROCESSING_CRYPTO', 'COMPLETED'].includes(o.status)
+    );
+    return order || null;
+  }
+
   async updateOrderStatus(
     orderId: string,
     status: PaymentStatus,

@@ -13,7 +13,9 @@ import {
   Sparkles, 
   X, 
   Loader2, 
-  RefreshCw 
+  RefreshCw,
+  Printer,
+  ShieldCheck 
 } from 'lucide-react';
 import { Order, USDT_CONTRACTS } from '@upi-crypto/shared';
 import { API_URL } from '../config';
@@ -366,12 +368,22 @@ export const TransactionsTable: React.FC<TransactionsTableProps> = ({ orders, on
                   <p className="text-xs text-slate-500 mono">{selectedOrder.id}</p>
                 </div>
               </div>
-              <button
-                onClick={() => setSelectedOrder(null)}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
-              >
-                <X className="h-5 w-5" />
-              </button>
+              <div className="flex items-center space-x-1">
+                <button
+                  type="button"
+                  onClick={() => window.print()}
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+                  title="Print Order Receipt"
+                >
+                  <Printer className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => setSelectedOrder(null)}
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
             </div>
 
             <div className="p-6 space-y-6">
