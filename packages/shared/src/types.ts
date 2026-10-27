@@ -110,3 +110,38 @@ export interface DashboardStats {
   pendingOrdersCount: number;
   recentOrders: Order[];
 }
+
+export type LedgerAccountType = 
+  | 'assets:fiat:upi_inr_receivable'
+  | 'assets:crypto:hot_wallet_usdt'
+  | 'liabilities:merchants:usdt_payable'
+  | 'liabilities:govt:tds_inr_payable'
+  | 'revenues:gateway:platform_fee_inr';
+
+export interface LedgerPosting {
+  account: LedgerAccountType;
+  amount: number;
+  currency: 'INR' | 'USDT';
+  direction: 'DEBIT' | 'CREDIT';
+}
+
+export interface LedgerEntry {
+  id: string;
+  orderId: string;
+  eventType: 'UPI_COLLECTED' | 'CRYPTO_DISPATCHED' | 'REFUND_REVERSED';
+  timestamp: string;
+  postings: LedgerPosting[];
+  previousHash: string;
+  entryHash: string;
+}
+
+export interface LedgerAuditReport {
+  isChainValid: boolean;
+  totalEntriesCount: number;
+  totalInrDebited: number;
+  totalInrCredited: number;
+  totalUsdtDebited: number;
+  totalUsdtCredited: number;
+  hasDiscrepancy: boolean;
+  lastVerifiedAt: string;
+}

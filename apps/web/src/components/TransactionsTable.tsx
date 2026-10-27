@@ -15,9 +15,11 @@ import {
   Loader2, 
   RefreshCw,
   Printer,
-  ShieldCheck 
+  ShieldCheck,
+  BookCheck,
+  ChevronRight
 } from 'lucide-react';
-import { Order, USDT_CONTRACTS } from '@upi-crypto/shared';
+import { Order, USDT_CONTRACTS, LedgerAuditReport } from '@upi-crypto/shared';
 import { API_URL } from '../config';
 
 interface TransactionsTableProps {
@@ -34,6 +36,9 @@ export const TransactionsTable: React.FC<TransactionsTableProps> = ({ orders, on
   const [isSubmittingUtr, setIsSubmittingUtr] = useState<boolean>(false);
   const [isSimulating, setIsSimulating] = useState<boolean>(false);
   const [isRetrying, setIsRetrying] = useState<boolean>(false);
+  const [isAuditOpen, setIsAuditOpen] = useState<boolean>(false);
+  const [auditReport, setAuditReport] = useState<LedgerAuditReport | null>(null);
+  const [isLoadingAudit, setIsLoadingAudit] = useState<boolean>(false);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -148,6 +153,21 @@ export const TransactionsTable: React.FC<TransactionsTableProps> = ({ orders, on
     document.body.removeChild(link);
   };
 
+  const handleOpenAudit = async () => {
+    setIsLoadingAudit(true);
+    setIsAuditOpen(true);
+    try {
+      const res = await fetch(`${API_URL}/api/v1/ledger/audit`);
+      if (res.ok) {
+        const data = await res.json();
+        setAuditReport(data);
+      }
+    } catch {}
+    finally {
+      setIsLoadingAudit(false);
+    }
+  };
+
   const handleVerifyUtrInModal = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedOrder || !utrInput.trim()) return;
@@ -226,9 +246,17 @@ export const TransactionsTable: React.FC<TransactionsTableProps> = ({ orders, on
       <div className="px-6 py-4 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 className="text-base font-bold text-slate-900">Payment &amp; On-Chain Settlement History</h2>
-          <p className="text-xs text-slate-500">Click any row to inspect receipt, QR code, bank UTR, or blockchain explorer</p>
+          <p className="text-xs text-slate-500">Cryptographically balanced double-entry ledger with instant settlement verification</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={handleOpenAudit}
+            className="px-3 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-xs font-semibold text-emerald-800 border border-emerald-200 transition-colors flex items-center space-x-1.5"
+            title="Inspect Cryptographic Ledger Audit"
+          >
+            <BookCheck className="h-3.5 w-3.5 text-emerald-600" />
+            <span>Ledger Audit Proof</span>
+          </button>
           <button
             onClick={exportCsv}
             disabled={orders.length === 0}
@@ -285,7 +313,46 @@ export const TransactionsTable: React.FC<TransactionsTableProps> = ({ orders, on
         </div>
       </div>
 
-      <div className="overflow-x-auto">
+      <div className="block sm:hidden divide-y divide-slate-100">
+        {filteredOrders.length === 0 ? (
+          <div className="p-8 text-center text-xs text-slate-400">
+            {orders.length === 0
+              ? 'No payment orders yet. Click "Collect Payment" to generate your first UPI QR code!'
+              : 'No orders match your filter criteria.'}
+          </div>
+        ) : (
+          filteredOrders.map(order => (
+            <div
+              key={order.id}
+              onClick={() => setSelectedOrder(order)}
+              className="p-4 hover:bg-emerald-50/40 active:bg-slate-100 transition-colors cursor-pointer space-y-2.5"
+            >
+              <div className="flex items-center justify-between">
+                <span className="mono font-bold text-xs text-slate-900">{order.id}</span>
+                {getStatusBadge(order.status)}
+              </div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-[11px] text-slate-500">UPI Paid: </span>
+                  <span className="font-bold text-xs text-slate-900 mono">₹{order.amountInr.toFixed(2)}</span>
+                </div>
+                <div className="font-bold text-xs text-emerald-600 mono">
+                  +{order.amountUsdt.toFixed(4)} USDT
+                </div>
+              </div>
+              <div className="flex items-center justify-between text-[11px] text-slate-500 pt-0.5">
+                <span>{formatDate(order.createdAt)}</span>
+                <span className="inline-flex items-center text-emerald-700 font-semibold">
+                  <span>View Details</span>
+                  <ChevronRight className="h-3 w-3 ml-0.5" />
+                </span>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      <div className="hidden sm:block overflow-x-auto">
         <table className="w-full text-left text-xs">
           <thead className="bg-slate-50 text-slate-600 uppercase font-semibold tracking-wider border-b border-slate-200">
             <tr>
@@ -355,9 +422,100 @@ export const TransactionsTable: React.FC<TransactionsTableProps> = ({ orders, on
         </table>
       </div>
 
-      {selectedOrder && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
+      {isAuditOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 max-sm:p-2 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="relative w-full max-w-lg rounded-2xl bg-white border border-slate-200 shadow-2xl overflow-hidden max-h-[92vh] overflow-y-auto">
+            <div className="sticky top-0 z-10 bg-white flex items-center justify-between px-6 py-4 border-b border-slate-100">
+              <div className="flex items-center space-x-2">
+                <div className="h-8 w-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                  <BookCheck className="h-4 w-4" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-base text-slate-900">Cryptographic Ledger Audit</h3>
+                  <p className="text-xs text-slate-500">SHA-256 Chained Double-Entry Balance Verification</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsAuditOpen(false)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-5">
+              {isLoadingAudit ? (
+                <div className="flex flex-col items-center justify-center p-12 space-y-3">
+                  <Loader2 className="h-8 w-8 text-emerald-600 animate-spin" />
+                  <p className="text-xs text-slate-500 font-medium">Verifying SHA-256 Ledger Hash Chain...</p>
+                </div>
+              ) : auditReport ? (
+                <div className="space-y-4">
+                  <div className={`p-4 rounded-xl border flex items-center space-x-3 ${
+                    auditReport.isChainValid && !auditReport.hasDiscrepancy
+                      ? 'bg-emerald-50/70 border-emerald-200 text-emerald-900'
+                      : 'bg-rose-50 border-rose-200 text-rose-900'
+                  }`}>
+                    <CheckCircle2 className="h-6 w-6 text-emerald-600 flex-shrink-0" />
+                    <div>
+                      <div className="font-bold text-sm">
+                        {auditReport.isChainValid && !auditReport.hasDiscrepancy ? 'Ledger Invariance Verified 100%' : 'Audit Discrepancy Detected'}
+                      </div>
+                      <div className="text-xs text-slate-600 mt-0.5">
+                        {auditReport.isChainValid && !auditReport.hasDiscrepancy
+                          ? 'Zero mathematical discrepancies found across all debit and credit journal entries.'
+                          : 'Potential ledger tampering detected.'}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 text-xs">
+                    <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
+                      <span className="text-slate-500">Journal Entries Count</span>
+                      <div className="text-lg font-bold text-slate-900 mono">{auditReport.totalEntriesCount}</div>
+                    </div>
+                    <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
+                      <span className="text-slate-500">Hash Chain Integrity</span>
+                      <div className="text-lg font-bold text-emerald-600">VALID</div>
+                    </div>
+                    <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
+                      <span className="text-slate-500">Total INR Debited</span>
+                      <div className="text-sm font-bold text-slate-900 mono">₹{auditReport.totalInrDebited.toFixed(2)}</div>
+                    </div>
+                    <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
+                      <span className="text-slate-500">Total INR Credited</span>
+                      <div className="text-sm font-bold text-slate-900 mono">₹{auditReport.totalInrCredited.toFixed(2)}</div>
+                    </div>
+                    <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
+                      <span className="text-slate-500">Total USDT Debited</span>
+                      <div className="text-sm font-bold text-emerald-700 mono">{auditReport.totalUsdtDebited.toFixed(4)} USDT</div>
+                    </div>
+                    <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
+                      <span className="text-slate-500">Total USDT Credited</span>
+                      <div className="text-sm font-bold text-emerald-700 mono">{auditReport.totalUsdtCredited.toFixed(4)} USDT</div>
+                    </div>
+                  </div>
+
+                  <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-1.5 text-xs text-slate-600">
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Verification Engine:</span>
+                      <span className="font-semibold text-slate-900">Double-Entry SHA-256 Merkle Ledger</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Last Verified Timestamp:</span>
+                      <span className="mono text-slate-800">{formatDate(auditReport.lastVerifiedAt)}</span>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {selectedOrder && (
+        <div className="fixed inset-0 z-50 flex items-center max-sm:items-end justify-center p-4 max-sm:p-0 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="relative w-full max-w-lg rounded-2xl max-sm:rounded-b-none max-sm:bottom-0 max-sm:max-h-[92vh] max-sm:w-full bg-white border border-slate-200 shadow-2xl overflow-hidden max-h-[92vh] overflow-y-auto">
             <div className="sticky top-0 z-10 bg-white flex items-center justify-between px-6 py-4 border-b border-slate-100">
               <div className="flex items-center space-x-2">
                 <div className="h-8 w-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">

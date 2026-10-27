@@ -128,15 +128,15 @@ export const WalletConnectSection: React.FC<WalletConnectSectionProps> = ({
               </span>
             </div>
 
-            <div className="flex items-center space-x-2">
-              <span className="text-lg font-bold text-slate-900 mono">
+            <div className="flex items-center space-x-2 flex-wrap">
+              <span className="text-sm sm:text-lg font-bold text-slate-900 mono break-all">
                 {merchant.walletAddress}
               </span>
               <a
                 href={getExplorerLink(merchant.walletAddress)}
                 target="_blank"
                 rel="noreferrer"
-                className="text-slate-400 hover:text-emerald-700"
+                className="text-slate-400 hover:text-emerald-700 flex-shrink-0"
                 title="View on Explorer"
               >
                 <ExternalLink className="h-4 w-4" />

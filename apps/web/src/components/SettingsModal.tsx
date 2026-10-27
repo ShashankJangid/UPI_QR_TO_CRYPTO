@@ -185,7 +185,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <div className="space-y-2 text-xs">
                 <div className="flex justify-between text-slate-600">
                   <span>Relayer Address:</span>
-                  <span className="mono text-slate-900 font-medium">{relayerStatus.address}</span>
+                  <span className="mono text-slate-900 font-medium truncate max-w-[180px] sm:max-w-[260px]">{relayerStatus.address}</span>
                 </div>
                 <div className="flex justify-between text-slate-600">
                   <span>Native Gas Balance:</span>

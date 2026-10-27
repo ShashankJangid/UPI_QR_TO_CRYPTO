@@ -2,7 +2,8 @@ import { db } from '../db';
 import { onrampService } from './onramp.service';
 import { blockchainService } from './blockchain.service';
 import { wsService } from './websocket.service';
-import { Order, CreatePaymentRequest, CreatePaymentResponse, BlockchainNetwork } from '@upi-crypto/shared';
+import { ledgerService } from './ledger.service';
+import { Order, CreatePaymentRequest, CreatePaymentResponse, BlockchainNetwork, DEFAULT_RATE } from '@upi-crypto/shared';
 
 export class PaymentService {
   async createPayment(merchantId: string, req: CreatePaymentRequest): Promise<CreatePaymentResponse> {
@@ -105,6 +106,10 @@ export class PaymentService {
     if (updated) {
       wsService.emitOrderStatusUpdate(updated);
 
+      const feeInr = parseFloat((updated.amountInr * (DEFAULT_RATE.BASE_FEE_PERCENT / 100)).toFixed(2));
+      const tdsInr = parseFloat((updated.amountInr * (DEFAULT_RATE.TDS_PERCENT / 100)).toFixed(2));
+      await ledgerService.recordUpiPaymentCollected(updated, feeInr, tdsInr).catch(() => {});
+
       setTimeout(() => {
         this.dispatchCryptoPayout(orderId);
       }, 1000);
@@ -134,6 +139,7 @@ export class PaymentService {
       });
 
       if (completed) {
+        await ledgerService.recordCryptoPayoutDispatched(completed).catch(() => {});
         wsService.emitOrderStatusUpdate(completed);
       }
 

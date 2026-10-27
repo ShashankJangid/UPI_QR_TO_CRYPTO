@@ -2,12 +2,13 @@ import { Pool } from 'pg';
 import fs from 'fs';
 import path from 'path';
 import { config } from '../config';
-import { Merchant, Order, BlockchainNetwork, PaymentStatus } from '@upi-crypto/shared';
+import { Merchant, Order, BlockchainNetwork, PaymentStatus, LedgerEntry } from '@upi-crypto/shared';
 
 interface DBStore {
   merchants: Merchant[];
   orders: Order[];
   webhookEvents: { id: string; eventId: string; eventType: string; payload: any; processed: boolean; createdAt: string }[];
+  ledgerEntries: LedgerEntry[];
 }
 
 const dataDir = path.resolve(__dirname, '../../data');
@@ -19,7 +20,8 @@ class DatabaseManager {
   private memoryStore: DBStore = {
     merchants: [],
     orders: [],
-    webhookEvents: []
+    webhookEvents: [],
+    ledgerEntries: []
   };
 
   async initialize() {
@@ -47,6 +49,9 @@ class DatabaseManager {
       try {
         const content = fs.readFileSync(dbFilePath, 'utf-8');
         this.memoryStore = JSON.parse(content);
+        if (!this.memoryStore.ledgerEntries) {
+          this.memoryStore.ledgerEntries = [];
+        }
       } catch {
         this.saveMemoryStore();
       }
@@ -400,6 +405,52 @@ class DatabaseManager {
       createdAt: row.created_at instanceof Date ? row.created_at.toISOString() : row.created_at,
       updatedAt: row.updated_at instanceof Date ? row.updated_at.toISOString() : row.updated_at
     };
+  }
+
+  async saveLedgerEntry(entry: LedgerEntry): Promise<LedgerEntry> {
+    if (this.isPostgresAvailable && this.pgPool) {
+      await this.pgPool.query(
+        `INSERT INTO ledger_entries (id, order_id, event_type, postings, previous_hash, entry_hash, timestamp)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+        [entry.id, entry.orderId, entry.eventType, JSON.stringify(entry.postings), entry.previousHash, entry.entryHash, entry.timestamp]
+      );
+      return entry;
+    }
+
+    if (!this.memoryStore.ledgerEntries) {
+      this.memoryStore.ledgerEntries = [];
+    }
+    this.memoryStore.ledgerEntries.push(entry);
+    this.saveMemoryStore();
+    return entry;
+  }
+
+  async getAllLedgerEntries(): Promise<LedgerEntry[]> {
+    if (this.isPostgresAvailable && this.pgPool) {
+      const res = await this.pgPool.query('SELECT * FROM ledger_entries ORDER BY timestamp ASC');
+      return res.rows.map(r => ({
+        id: r.id,
+        orderId: r.order_id,
+        eventType: r.event_type,
+        postings: typeof r.postings === 'string' ? JSON.parse(r.postings) : r.postings,
+        previousHash: r.previous_hash,
+        entryHash: r.entry_hash,
+        timestamp: r.timestamp instanceof Date ? r.timestamp.toISOString() : r.timestamp
+      }));
+    }
+
+    return this.memoryStore.ledgerEntries || [];
+  }
+
+  async getLastLedgerEntry(): Promise<LedgerEntry | null> {
+    const all = await this.getAllLedgerEntries();
+    if (all.length === 0) return null;
+    return all[all.length - 1];
+  }
+
+  async getLedgerEntriesByOrderId(orderId: string): Promise<LedgerEntry[]> {
+    const all = await this.getAllLedgerEntries();
+    return all.filter(e => e.orderId === orderId);
   }
 }
 

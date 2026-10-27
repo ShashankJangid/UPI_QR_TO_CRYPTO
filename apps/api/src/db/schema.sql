@@ -44,6 +44,19 @@ CREATE TABLE IF NOT EXISTS webhook_events (
     created_at      TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS ledger_entries (
+    id              VARCHAR(36) PRIMARY KEY,
+    order_id        VARCHAR(36) NOT NULL REFERENCES orders(id),
+    event_type      VARCHAR(50) NOT NULL,
+    timestamp       TIMESTAMPTZ NOT NULL,
+    postings        JSONB NOT NULL,
+    previous_hash   VARCHAR(64) NOT NULL,
+    entry_hash      VARCHAR(64) NOT NULL,
+    created_at      TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE INDEX IF NOT EXISTS idx_orders_merchant ON orders(merchant_id);
 CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);
 CREATE INDEX IF NOT EXISTS idx_orders_onramp_txn ON orders(onramp_txn_id);
+CREATE INDEX IF NOT EXISTS idx_ledger_order_id ON ledger_entries(order_id);
+CREATE INDEX IF NOT EXISTS idx_ledger_entry_hash ON ledger_entries(entry_hash);

@@ -19,10 +19,25 @@ export interface RelayerStatus {
   contractAddress: string;
 }
 
+class AsyncNonceMutex {
+  private currentLock: Promise<void> = Promise.resolve();
+
+  async acquire(): Promise<() => void> {
+    let releaseLock: () => void;
+    const waitPromise = new Promise<void>(resolve => {
+      releaseLock = resolve;
+    });
+    const lockWait = this.currentLock.then(() => releaseLock);
+    this.currentLock = this.currentLock.then(() => waitPromise);
+    return lockWait;
+  }
+}
+
 export class BlockchainService {
   private polygonProvider: ethers.JsonRpcProvider;
   private bscProvider: ethers.JsonRpcProvider;
   private relayerWallet: ethers.Wallet | null = null;
+  private nonceMutex = new AsyncNonceMutex();
 
   constructor() {
     this.polygonProvider = new ethers.JsonRpcProvider(config.blockchain.polygonRpc, undefined, { staticNetwork: true });
@@ -109,6 +124,7 @@ export class BlockchainService {
     }
 
     if (this.relayerWallet) {
+      const releaseMutex = await this.nonceMutex.acquire();
       try {
         const provider = network === 'bsc' ? this.bscProvider : this.polygonProvider;
         const signer = this.relayerWallet.connect(provider);
@@ -121,7 +137,8 @@ export class BlockchainService {
           
           const nativeBal = await provider.getBalance(signer.address).catch(() => BigInt(0));
           if (nativeBal > BigInt(1000000000000000)) {
-            const tx = await contract.transfer(destinationWallet, tokenAmount);
+            const nextNonce = await provider.getTransactionCount(signer.address, 'pending');
+            const tx = await contract.transfer(destinationWallet, tokenAmount, { nonce: nextNonce });
             const receipt = await tx.wait(1);
             return {
               txHash: tx.hash,
@@ -132,6 +149,8 @@ export class BlockchainService {
         }
       } catch (err: any) {
         console.warn(err.message);
+      } finally {
+        releaseMutex();
       }
     }
 

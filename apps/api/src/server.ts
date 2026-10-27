@@ -10,6 +10,7 @@ import { startOrphanRecoveryWorker } from './workers/orphan-recovery.worker';
 import paymentsRouter from './routes/payments';
 import webhooksRouter from './routes/webhooks';
 import merchantsRouter from './routes/merchants';
+import ledgerRouter from './routes/ledger';
 
 async function bootstrap() {
   const app = express();
@@ -61,6 +62,7 @@ async function bootstrap() {
   app.use('/api/v1/payments', paymentsRouter);
   app.use('/api/v1/webhooks', webhooksRouter);
   app.use('/api/v1/merchants', merchantsRouter);
+  app.use('/api/v1/ledger', ledgerRouter);
 
   app.use((err: any, req: Request, res: Response, next: NextFunction) => {
     const statusCode = err.status || 500;
