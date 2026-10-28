@@ -1,2 +1,2 @@
-/api/* https://api.yourgateway.com/api/:splat 200
+/api/* https://api-crypto.orangefuturetech.com/api/:splat 200
 /* /index.html 200
