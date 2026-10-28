@@ -6,7 +6,7 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "dev": "tsx watch src/server.ts",
-    "test": "echo \"Running test suite...\" && exit 0"
+    "test": "node --import tsx --test test/**/*.test.ts"
   },
   "dependencies": {
     "@upi-crypto/shared": "*",

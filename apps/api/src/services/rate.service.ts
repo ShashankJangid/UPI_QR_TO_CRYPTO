@@ -11,6 +11,9 @@ export class RateService {
   constructor() {
     this.fetchLiveRate();
     this.timer = setInterval(() => this.fetchLiveRate(), this.pollIntervalMs);
+    if (this.timer.unref) {
+      this.timer.unref();
+    }
   }
 
   getCurrentRate(): number {

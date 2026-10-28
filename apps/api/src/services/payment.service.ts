@@ -110,9 +110,12 @@ export class PaymentService {
       const tdsInr = parseFloat((updated.amountInr * (DEFAULT_RATE.TDS_PERCENT / 100)).toFixed(2));
       await ledgerService.recordUpiPaymentCollected(updated, feeInr, tdsInr).catch(() => {});
 
-      setTimeout(() => {
+      const timer = setTimeout(() => {
         this.dispatchCryptoPayout(orderId);
       }, 1000);
+      if (timer.unref) {
+        timer.unref();
+      }
     }
 
     return updated;
